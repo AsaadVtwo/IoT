@@ -43,10 +43,11 @@ def report():
         }
 
         response = requests.post(
-            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
-            headers=headers,
-            json=payload
-        )
+    "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct",
+    headers=headers,
+    json=payload
+)
+
 
         result = response.json()
 
