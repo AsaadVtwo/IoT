@@ -28,10 +28,12 @@ The smart control device recorded the following:
 - Humidity: {hum}%
 - System status: {status}
 - Time: {now}
-
-Please generate a short, professional report in English that summarizes the current state and gives suggestions if needed.
-Only include the final report, do not repeat the data above.
 """
+
+        if status == "off":
+            prompt += "\nNote that the system is off because the environmental conditions are optimal and do not require heating or cooling."
+
+        prompt += "\nPlease generate a short, professional report in English that summarizes the current state and gives suggestions if needed. Only include the final report, do not repeat the data above."
 
         headers = {
             "Authorization": f"Bearer {HUGGINGFACE_API_KEY}"
