@@ -9,7 +9,7 @@ HUGGINGFACE_API_KEY = os.getenv("HF_API_KEY")
 
 @app.route("/")
 def home():
-    return "✅ خادم Hugging Face يعمل بشكل جيد"
+    return "✅ خادم Falcon يعمل بنجاح"
 
 @app.route("/report", methods=["POST"])
 def report():
@@ -28,8 +28,8 @@ def report():
 - الوقت: {now}
 
 من فضلك أنشئ تقريرًا موجزًا باللغة العربية يوضح الحالة ويوصي بما يجب فعله إن لزم.
+اكتب فقط التقرير بدون إعادة كتابة البيانات السابقة.
 """
-        prompt += "\n\nاكتب فقط تقريرًا مختصرًا باللغة العربية يوضح حالة النظام ويوصي بما يجب فعله. لا تكرر البيانات أعلاه."
 
         headers = {
             "Authorization": f"Bearer {HUGGINGFACE_API_KEY}"
@@ -38,14 +38,14 @@ def report():
         payload = {
             "inputs": prompt,
             "parameters": {
-                "max_new_tokens": 80,
+                "max_new_tokens": 100,
                 "temperature": 0.7,
                 "do_sample": True
             }
         }
 
         response = requests.post(
-            "https://api-inference.huggingface.co/models/deepseek-ai/deepseek-coder-6.7b-instruct",
+            "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct",
             headers=headers,
             json=payload
         )
@@ -53,7 +53,7 @@ def report():
         result = response.json()
 
         if isinstance(result, list) and "generated_text" in result[0]:
-            report_text = result[0]["generated_text"].replace(prompt.strip(), "").strip()
+            report_text = result[0]["generated_text"]
         else:
             report_text = result.get("error", "تعذر توليد التقرير.")
 
