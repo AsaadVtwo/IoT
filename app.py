@@ -5,7 +5,6 @@ import os
 
 app = Flask(__name__)
 
-# اقرأ التوكن الخاص بك من متغير بيئة (لتبقى آمنًا)
 HUGGINGFACE_API_KEY = os.getenv("HF_API_KEY")
 
 @app.route("/")
@@ -46,7 +45,7 @@ def report():
         }
 
         response = requests.post(
-            "https://api-inference.huggingface.co/models/deepseek-ai/deepseek-llm-7b-instruct",
+            "https://api-inference.huggingface.co/models/deepseek-ai/deepseek-coder-6.7b-instruct",
             headers=headers,
             json=payload
         )
@@ -54,7 +53,7 @@ def report():
         result = response.json()
 
         if isinstance(result, list) and "generated_text" in result[0]:
-            report_text = result[0]["generated_text"]
+            report_text = result[0]["generated_text"].replace(prompt.strip(), "").strip()
         else:
             report_text = result.get("error", "تعذر توليد التقرير.")
 
