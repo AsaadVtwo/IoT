@@ -61,3 +61,6 @@ Only include the final report, do not repeat the data above.
 
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
