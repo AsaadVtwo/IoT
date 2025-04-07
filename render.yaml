@@ -1,0 +1,10 @@
+services:
+  - type: web                      # نوع الخدمة: موقع ويب (سيرفر Flask)
+    name: ai-server                # اسم الخدمة
+    env: python                    # لغة التشغيل (Python)
+    plan: free                     # الخطة (مجانية)
+    buildCommand: "pip install -r requirements.txt"  # أمر التثبيت
+    startCommand: "gunicorn app:app"                # أمر التشغيل
+    envVars:                        # المتغيرات البيئية (مثل التوكن)
+      - key: HF_API_KEY
+        sync: false  # يعني تضيفه يدوي من لوحة Render
