@@ -1,20 +1,20 @@
 from flask import Flask, request, jsonify
-import openai
+import requests
 import datetime
 import os
 
 app = Flask(__name__)
-openai.api_key = os.getenv("OPENAI_API_KEY")  # مفتاح من متغير بيئة
+
+# اقرأ التوكن الخاص بك من متغير بيئة (لتبقى آمنًا)
+HUGGINGFACE_API_KEY = os.getenv("HF_API_KEY")
 
 @app.route("/")
 def home():
-    return "خادم الذكاء التوليدي يعمل ✅"
+    return "✅ خادم Hugging Face يعمل بشكل جيد"
 
 @app.route("/report", methods=["POST"])
 def report():
     try:
-        print("🔍 مفتاح OpenAI:", openai.api_key)  # نطبع المفتاح في الـ logs للتأكيد
-
         data = request.json
         temp = data.get("temperature")
         hum = data.get("humidity")
@@ -28,17 +28,34 @@ def report():
         - حالة النظام: {status}
         - الوقت: {now}
 
-        من فضلك أنشئ تقريرًا موجزًا باللغة العربية يوضح الحالة الحالية ويوصي بما يجب فعله إن لزم.
+        من فضلك أنشئ تقريرًا موجزًا باللغة العربية يوضح الحالة ويوصي بما يجب فعله إن لزم.
         """
 
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}]
+        headers = {
+            "Authorization": f"Bearer {HUGGINGFACE_API_KEY}"
+        }
+
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": 100
+            }
+        }
+
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+            headers=headers,
+            json=payload
         )
 
-        report_text = response["choices"][0]["message"]["content"]
+        result = response.json()
+
+        if isinstance(result, list):
+            report_text = result[0]["generated_text"]
+        else:
+            report_text = result.get("error", "تعذر توليد التقرير.")
+
         return jsonify({"report": report_text})
-    
+
     except Exception as e:
-        print("🔥 حصل خطأ:", str(e))
-        return jsonify({"error": "حدث خطأ داخلي", "details": str(e)}), 500
+        return jsonify({"error": "حدث خطأ في الخادم", "details": str(e)}), 500
