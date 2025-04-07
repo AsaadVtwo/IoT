@@ -55,7 +55,10 @@ Only include the final report, do not repeat the data above.
         result = response.json()
 
         if isinstance(result, list) and "generated_text" in result[0]:
-            return jsonify({"report": result[0]["generated_text"]})
+            # استخراج التقرير النهائي فقط
+            generated_text = result[0]["generated_text"]
+            final_report = generated_text.split("Only include the final report, do not repeat the data above.")[-1].strip()
+            return jsonify({"report": final_report})
         else:
             return jsonify({"error": "Failed to generate report", "details": result}), 500
 
