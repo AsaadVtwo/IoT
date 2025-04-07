@@ -30,7 +30,7 @@ def report():
 
 من فضلك أنشئ تقريرًا موجزًا باللغة العربية يوضح الحالة ويوصي بما يجب فعله إن لزم.
 """
-
+        prompt += "\n\nاكتب فقط تقريرًا مختصرًا باللغة العربية يوضح حالة النظام ويوصي بما يجب فعله. لا تكرر البيانات أعلاه."
 
         headers = {
             "Authorization": f"Bearer {HUGGINGFACE_API_KEY}"
@@ -39,20 +39,21 @@ def report():
         payload = {
             "inputs": prompt,
             "parameters": {
-                "max_new_tokens": 100
+                "max_new_tokens": 80,
+                "temperature": 0.7,
+                "do_sample": True
             }
         }
 
         response = requests.post(
-    "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct",
-    headers=headers,
-    json=payload
-)
-
+            "https://api-inference.huggingface.co/models/deepseek-ai/deepseek-llm-7b-instruct",
+            headers=headers,
+            json=payload
+        )
 
         result = response.json()
 
-        if isinstance(result, list):
+        if isinstance(result, list) and "generated_text" in result[0]:
             report_text = result[0]["generated_text"]
         else:
             report_text = result.get("error", "تعذر توليد التقرير.")
