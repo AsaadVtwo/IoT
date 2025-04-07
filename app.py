@@ -1,15 +1,16 @@
 from flask import Flask, request, jsonify
 import requests
-import datetime
 import os
+import datetime
 
 app = Flask(__name__)
 
+# اقرأ التوكن من متغير بيئة
 HUGGINGFACE_API_KEY = os.getenv("HF_API_KEY")
 
 @app.route("/")
 def home():
-    return "✅ خادم Falcon يعمل بنجاح"
+    return "✅ Mistral AI server is running."
 
 @app.route("/report", methods=["POST"])
 def report():
@@ -20,15 +21,16 @@ def report():
         status = data.get("status")
         now = datetime.datetime.now().strftime("%H:%M")
 
+        # إعداد الطلب
         prompt = f"""
-تم تسجيل القيم التالية بواسطة جهاز تحكم ذكي:
-- درجة الحرارة: {temp} درجة مئوية
-- الرطوبة: {hum}٪
-- حالة النظام: {status}
-- الوقت: {now}
+The smart control device recorded the following:
+- Temperature: {temp}°C
+- Humidity: {hum}%
+- System status: {status}
+- Time: {now}
 
-من فضلك أنشئ تقريرًا موجزًا باللغة العربية يوضح الحالة ويوصي بما يجب فعله إن لزم.
-اكتب فقط التقرير بدون إعادة كتابة البيانات السابقة.
+Please generate a short, professional report in English that summarizes the current state and gives suggestions if needed.
+Only include the final report, do not repeat the data above.
 """
 
         headers = {
@@ -45,7 +47,7 @@ def report():
         }
 
         response = requests.post(
-            "https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct",
+            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
             headers=headers,
             json=payload
         )
@@ -53,11 +55,9 @@ def report():
         result = response.json()
 
         if isinstance(result, list) and "generated_text" in result[0]:
-            report_text = result[0]["generated_text"]
+            return jsonify({"report": result[0]["generated_text"]})
         else:
-            report_text = result.get("error", "تعذر توليد التقرير.")
-
-        return jsonify({"report": report_text})
+            return jsonify({"error": "Failed to generate report", "details": result}), 500
 
     except Exception as e:
-        return jsonify({"error": "حدث خطأ في الخادم", "details": str(e)}), 500
+        return jsonify({"error": "Server error", "details": str(e)}), 500
