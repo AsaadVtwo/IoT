@@ -1,29 +1,3 @@
-import os
-import datetime
-import logging
-from flask import Flask, request, jsonify
-from openai import OpenAI
-import requests
-import traceback
-
-# تعريف الكائن Flask
-app = Flask(__name__)
-
-# تعريف الكائن OpenAI باستخدام مفتاح API
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# إعداد السجل لعرض الرسائل في الـ logs
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-# URL الخاص بـ Google Apps Script
-GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNQfywoqMbCeUpJ8F2vZnnuBIDQrS8oT8WqS7Vb7usv0TSwO0flM0y71OlI3W2VNm4/exec'
-
-@app.route("/")
-def home():
-    return "✅ AI IoT Report Server is running with OpenAI."
-
-
 @app.route("/report", methods=["POST"])
 def report():
     try:
@@ -79,97 +53,54 @@ def report():
         # الحصول على التقرير النهائي
         final_report = response.choices[0].message.content.strip()
         logger.info(f"Generated Report: {final_report}")
-        return jsonify({"report": final_report})
+
+        # إرجاع التقرير في صفحة HTML
+        html_response = f"""
+        <!DOCTYPE html>
+        <html lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>تقرير الذكاء الاصطناعي</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    background-color: #f4f4f9;
+                    color: #333;
+                    text-align: center;
+                    margin: 0;
+                    padding: 0;
+                }}
+                h1 {{
+                    color: #0078D4;
+                    font-size: 24px;
+                    margin-bottom: 20px;
+                }}
+                pre {{
+                    font-size: 16px;
+                    background-color: #f0f0f0;
+                    padding: 15px;
+                    border-radius: 5px;
+                    text-align: left;
+                    max-width: 80%;
+                    margin: auto;
+                    white-space: pre-wrap; /* لف النص */
+                    word-wrap: break-word; /* كسر الكلمات الطويلة */
+                }}
+            </style>
+        </head>
+        <body>
+            <h1>تقرير الذكاء الاصطناعي</h1>
+            <h2>النسخة الإنجليزية:</h2>
+            <pre>{final_report.split("Arabic Report:")[0].strip()}</pre>  <!-- عرض التقرير بالإنجليزية -->
+            <h2>النسخة العربية:</h2>
+            <pre>{final_report.split("Arabic Report:")[1].strip()}</pre>  <!-- عرض التقرير بالعربية -->
+        </body>
+        </html>
+        """
+        return html_response
 
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}")
         traceback.print_exc()
         return jsonify({"error": "Server error", "details": str(e)}), 500
-
-
-def send_data_to_google_sheet(temp, hum, status):
-    """إرسال البيانات إلى Google Sheets عبر Google Apps Script"""
-    payload = {
-        'temperature': temp,
-        'humidity': hum,
-        'status': status
-    }
-    headers = {'Content-Type': 'application/json'}
-    try:
-        response = requests.post(GOOGLE_SCRIPT_URL, json=payload, headers=headers)
-        if response.status_code == 200:
-            logger.info("Data successfully sent to Google Sheets.")
-        else:
-            logger.error(f"Failed to send data to Google Sheets. Status code: {response.status_code}")
-    except Exception as e:
-        logger.error(f"Error sending data to Google Sheets: {str(e)}")
-
-
-@app.route("/chart")
-def chart():
-    labels = []
-    temperatures = []
-    humidities = []
-
-    if os.path.exists("log.csv"):
-        with open("log.csv", "r") as f:
-            lines = f.readlines()[1:]  # تخطي العنوان
-            for line in lines[-50:]:  # آخر 50 قراءة فقط
-                parts = line.strip().split(",")
-                labels.append(parts[0][-8:])  # hh:mm:ss
-                temperatures.append(float(parts[1]))
-                humidities.append(float(parts[2]))
-
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>📊 Temperature & Humidity Chart</title>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    </head>
-    <body>
-        <h2>📈 Last 50 Readings</h2>
-        <canvas id="myChart" width="900" height="400"></canvas>
-        <script>
-            const labels = {labels};
-            const tempData = {temperatures};
-            const humData = {humidities};
-
-            const ctx = document.getElementById('myChart').getContext('2d');
-            const myChart = new Chart(ctx, {{
-                type: 'line',
-                data: {{
-                    labels: labels,
-                    datasets: [
-                        {{
-                            label: 'Temperature (°C)',
-                            data: tempData,
-                            borderColor: 'red',
-                            fill: false
-                        }},
-                        {{
-                            label: 'Humidity (%)',
-                            data: humData,
-                            borderColor: 'blue',
-                            fill: false
-                        }}
-                    ]
-                }},
-                options: {{
-                    responsive: true,
-                    scales: {{
-                        y: {{
-                            beginAtZero: true
-                        }}
-                    }}
-                }}
-            }});
-        </script>
-    </body>
-    </html>
-    """
-    return html
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
