@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # URL الخاص بـ Google Apps Script
-GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_URL/exec'  # استبدل هذا بالرابط الفعلي لـ Google Apps Script
+GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNQfywoqMbCeUpJ8F2vZnnuBIDQrS8oT8WqS7Vb7usv0TSwO0flM0y71OlI3W2VNm4/exec'
 
 @app.route("/")
 def home():
