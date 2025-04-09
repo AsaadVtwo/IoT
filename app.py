@@ -1,4 +1,5 @@
 import openai  # تحتاج تركيبه: pip install openai
+import os
 
 openai.api_key = os.getenv("OPENAI_API_KEY")  # تأكد من ضبطه كمتغير بيئة
 
