@@ -57,7 +57,7 @@ def report():
         - Minimum temperature: {temp_min}°C
         - Maximum temperature: {temp_max}°C
 
-        Please generate a short English report that:
+        Please generate a short English and Arabic report that:
         1. Analyzes whether the current values are within the user-defined thresholds.
         2. Evaluates whether the system behavior is appropriate.
         3. Checks if the thresholds are reasonable and provides suggestions.
