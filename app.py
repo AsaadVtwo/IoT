@@ -1,14 +1,7 @@
+from openai import OpenAI
 import os
-import openai
-import requests
-import datetime
-from flask import Flask, request, jsonify
 
-# إنشاء تطبيق Flask
-app = Flask(__name__)
-
-# مفتاح OpenAI API من المتغير البيئي
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route("/report", methods=["POST"])
 def report():
@@ -24,14 +17,14 @@ def report():
         if None in [temp, hum, status, temp_min, temp_max]:
             return jsonify({"error": "Missing fields in JSON!"}), 400
 
-        # تخزين البيانات في CSV (اختياري)
+        # تخزين البيانات (اختياري)
         with open("log.csv", "a") as log_file:
             if os.stat("log.csv").st_size == 0:
                 log_file.write("timestamp,temperature,humidity,status\n")
             log_file.write(f"{now},{temp},{hum},{status}\n")
 
-        # بناء الـ Prompt
-        user_prompt = f"""
+        # إعداد الرسالة
+        prompt = f"""
 System Reading:
 - Temperature: {temp}°C
 - Humidity: {hum}%
@@ -49,12 +42,12 @@ Please generate a short English report that:
 Do not repeat the input. Write a concise and helpful professional summary.
 """
 
-        # استدعاء OpenAI
-        response = openai.ChatCompletion.create(
+        # استدعاء GPT بصيغة OpenAI الحديثة
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an IoT assistant that analyzes temperature and humidity data."},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": prompt}
             ],
             temperature=0.7,
             max_tokens=300
