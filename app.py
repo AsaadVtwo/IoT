@@ -1,7 +1,14 @@
-import openai  # تحتاج تركيبه: pip install openai
 import os
+import openai
+import requests
+import datetime
+from flask import Flask, request, jsonify
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # تأكد من ضبطه كمتغير بيئة
+# إنشاء تطبيق Flask
+app = Flask(__name__)
+
+# مفتاح OpenAI API من المتغير البيئي
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 @app.route("/report", methods=["POST"])
 def report():
