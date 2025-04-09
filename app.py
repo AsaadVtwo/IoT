@@ -1,12 +1,20 @@
 import os
 import datetime
+import logging
 from flask import Flask, request, jsonify
 from openai import OpenAI
+import requests
 import traceback
 
 app = Flask(__name__)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+# إعداد السجل لعرض الرسائل في الـ logs
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# URL الخاص بـ Google Apps Script
+GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_URL/exec'  # استبدل هذا بالرابط الفعلي لـ Google Apps Script
 
 @app.route("/")
 def home():
@@ -25,6 +33,7 @@ def report():
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         if None in [temp, hum, status, temp_min, temp_max]:
+            logger.error("Missing fields in JSON!")
             return jsonify({"error": "Missing fields in JSON!"}), 400
 
         # سجل البيانات في ملف CSV
@@ -33,26 +42,29 @@ def report():
                 log_file.write("timestamp,temperature,humidity,status\n")
             log_file.write(f"{now},{temp},{hum},{status}\n")
 
-        # بناء الـ prompt
+        # إرسال البيانات إلى Google Sheets
+        send_data_to_google_sheet(temp, hum, status)
+
+        # بناء الـ prompt لتحليل البيانات عبر OpenAI
         prompt = f"""
-System Reading:
-- Temperature: {temp}°C
-- Humidity: {hum}%
-- Status: {status}
-- Time: {now}
+        System Reading:
+        - Temperature: {temp}°C
+        - Humidity: {hum}%
+        - Status: {status}
+        - Time: {now}
 
-User Settings:
-- Minimum temperature: {temp_min}°C
-- Maximum temperature: {temp_max}°C
+        User Settings:
+        - Minimum temperature: {temp_min}°C
+        - Maximum temperature: {temp_max}°C
 
-Please generate a short English report that:
-1. Analyzes whether the current values are within the user-defined thresholds.
-2. Evaluates whether the system behavior is appropriate.
-3. Checks if the thresholds are reasonable and provides suggestions.
-Do not repeat the input. Write a concise and helpful professional summary.
-"""
+        Please generate a short English report that:
+        1. Analyzes whether the current values are within the user-defined thresholds.
+        2. Evaluates whether the system behavior is appropriate.
+        3. Checks if the thresholds are reasonable and provides suggestions.
+        Do not repeat the input. Write a concise and helpful professional summary.
+        """
 
-        # استدعاء GPT 3.5
+        # استدعاء GPT-3.5 لتحليل البيانات
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -64,11 +76,31 @@ Do not repeat the input. Write a concise and helpful professional summary.
         )
 
         final_report = response.choices[0].message.content.strip()
+        logger.info(f"Generated Report: {final_report}")
         return jsonify({"report": final_report})
 
     except Exception as e:
+        logger.error(f"Error processing request: {str(e)}")
         traceback.print_exc()
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
+
+def send_data_to_google_sheet(temp, hum, status):
+    """إرسال البيانات إلى Google Sheets عبر Google Apps Script"""
+    payload = {
+        'temperature': temp,
+        'humidity': hum,
+        'status': status
+    }
+    headers = {'Content-Type': 'application/json'}
+    try:
+        response = requests.post(GOOGLE_SCRIPT_URL, json=payload, headers=headers)
+        if response.status_code == 200:
+            logger.info("Data successfully sent to Google Sheets.")
+        else:
+            logger.error(f"Failed to send data to Google Sheets. Status code: {response.status_code}")
+    except Exception as e:
+        logger.error(f"Error sending data to Google Sheets: {str(e)}")
 
 
 @app.route("/chart")
