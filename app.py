@@ -310,7 +310,7 @@ def report():
         )
 
         final_report = response["choices"][0]["message"]["content"].strip()
-save_last_report(final_report)
+        save_last_report(final_report)
         logger.info(f"Generated Report: {final_report}")
         return jsonify({"report": final_report})
 
