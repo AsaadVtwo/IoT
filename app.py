@@ -121,6 +121,7 @@ def index():
             parts = last_line.strip().split(",")
             html += f"<div class='report-box'><b>Room:</b> {parts[4]}<br><b>Temp:</b> {parts[1]}°C<br><b>Humidity:</b> {parts[2]}%<br><b>Status:</b> {parts[3]}</div>"
 
+    html += f"<h3>🧠 AI Summary Report</h3><div class='report-box'>{load_last_report()}</div>"
     html += "<h3>🧠 Last AI Reports</h3><ul>"
     if os.path.exists(LOG_FILE):
         with open(LOG_FILE, "r") as f:
@@ -147,41 +148,6 @@ def get_device_settings():
         return jsonify(settings[device])
     else:
         return jsonify({"error": "Device not found"}), 404
-
-# OLD /report removed
-def report():
-    try:
-        data = request.json
-        temp = data.get("temperature")
-        hum = data.get("humidity")
-        status = data.get("status")
-        temp_min = data.get("temp_min")
-        temp_max = data.get("temp_max")
-        device = data.get("device")
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        if None in [temp, hum, status, temp_min, temp_max, device]:
-            return jsonify({"error": "Missing fields"}), 400
-
-        with open(LOG_FILE, "a") as f:
-            if os.stat(LOG_FILE).st_size == 0:
-                f.write("timestamp,temperature,humidity,status,device\n")
-            f.write(f"{now},{temp},{hum},{status},{device}\n")
-
-        send_data_to_google_sheet(temp, hum, status)
-
-        
-        if float(temp) > float(temp_max):
-            send_telegram_alert(f"🚨 {device} - High Temp {temp}°C! Cooling ON.")
-        elif float(temp) < float(temp_min):
-            send_telegram_alert(f"❄️ {device} - Low Temp {temp}°C! Heating ON.")
-
-        report_text = f"Room: {device}\nTemp: {temp}°C\nHumidity: {hum}%\nStatus: {status}\nAI Suggestions:\n- Check thresholds\n- System running properly."
-        return jsonify({"report": report_text})
-
-    except Exception as e:
-        logger.error(f"Error in report: {e}")
-        return jsonify({"error": str(e)}), 500
 
 def send_data_to_google_sheet(temp, hum, status):
     payload = {'temperature': temp, 'humidity': hum, 'status': status}
