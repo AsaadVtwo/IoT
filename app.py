@@ -14,6 +14,19 @@ SETTINGS_FILE = "settings.json"
 GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybDA0fCsJG7_OeU4TYaxqDSfFKboKtL0hdcxSWLRahC66zmAmAzAV8SYMr3O5Cu9kx/exec'
 LOG_FILE = "log.csv"
 
+LAST_REPORT_FILE = "last_report.txt"
+
+def save_last_report(text):
+    with open(LAST_REPORT_FILE, "w") as f:
+        f.write(text)
+
+def load_last_report():
+    if os.path.exists(LAST_REPORT_FILE):
+        with open(LAST_REPORT_FILE, "r") as f:
+            return f.read()
+    return "No AI report available yet."
+
+
 def load_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r") as f:
@@ -297,6 +310,7 @@ def report():
         )
 
         final_report = response["choices"][0]["message"]["content"].strip()
+save_last_report(final_report)
         logger.info(f"Generated Report: {final_report}")
         return jsonify({"report": final_report})
 
