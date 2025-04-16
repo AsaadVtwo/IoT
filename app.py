@@ -54,8 +54,10 @@ def index():
 def get_status():
     device = request.args.get("device")
     try:
+        if not os.path.exists(LOG_FILE):
+            return jsonify({"error": "Log file does not exist"})
         with open(LOG_FILE, "r") as f:
-            lines = f.readlines()[1:]  # Skip header
+            lines = f.readlines()[1:]
             last = next(line for line in reversed(lines) if device in line)
             parts = last.strip().split(",")
             return jsonify({
@@ -88,24 +90,26 @@ def get_device_settings():
         return jsonify({"error": "Device not found"}), 404
 
 @app.route("/report", methods=["POST"])
-def generate_report_for_device():
-    device = request.args.get("device")
+def report():
     try:
-        with open(LOG_FILE, "r") as f:
-            lines = f.readlines()[1:]  # skip header
-            last = next((line for line in reversed(lines) if device in line), None)
-            if not last:
-                return jsonify({"error": "No logs for this device"}), 404
-            parts = last.strip().split(",")
-            temp = float(parts[1])
-            hum = float(parts[2])
-            status = parts[3]
-        
-        settings = load_settings()
-        temp_min = settings.get(device, {}).get("temp_min", 20)
-        temp_max = settings.get(device, {}).get("temp_max", 30)
-
+        data = request.json
+        temp = data.get("temperature")
+        hum = data.get("humidity")
+        status = data.get("status")
+        temp_min = data.get("temp_min")
+        temp_max = data.get("temp_max")
+        device = data.get("device")
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        if None in [temp, hum, status, temp_min, temp_max, device]:
+            return jsonify({"error": "Missing fields"}), 400
+
+        with open(LOG_FILE, "a") as f:
+            if os.stat(LOG_FILE).st_size == 0:
+                f.write("timestamp,temperature,humidity,status,device\n")
+            f.write(f"{now},{temp},{hum},{status},{device}\n")
+
+        send_data_to_google_sheet(temp, hum, status)
 
         prompt = (
             f"System Reading:\n"
@@ -135,6 +139,60 @@ def generate_report_for_device():
 
         final_report = response.choices[0].message.content.strip()
         save_last_report(final_report)
+        return jsonify({"report": final_report})
+
+    except Exception as e:
+        logger.error(f"Error processing request: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"error": "Server error", "details": str(e)}), 500
+
+@app.route("/generate_from_logs", methods=["POST"])
+def generate_from_logs():
+    device = request.args.get("device")
+    try:
+        with open(LOG_FILE, "r") as f:
+            lines = f.readlines()[1:]
+            last = next((line for line in reversed(lines) if device in line), None)
+            if not last:
+                return jsonify({"error": "No logs for this device"}), 404
+            parts = last.strip().split(",")
+            temp = float(parts[1])
+            hum = float(parts[2])
+            status = parts[3]
+
+        settings = load_settings()
+        temp_min = settings.get(device, {}).get("temp_min", 20)
+        temp_max = settings.get(device, {}).get("temp_max", 30)
+
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        prompt = (
+            f"System Reading:\n"
+            f"- Temperature: {temp}°C\n"
+            f"- Humidity: {hum}%\n"
+            f"- Status: {status}\n"
+            f"- Time: {now}\n\n"
+            f"User Settings:\n"
+            f"- Minimum temperature: {temp_min}°C\n"
+            f"- Maximum temperature: {temp_max}°C\n\n"
+            "Please generate a short English report that:\n"
+            "1. Analyzes whether the current values are within the user-defined thresholds.\n"
+            "2. Evaluates whether the system behavior is appropriate.\n"
+            "3. Checks if the thresholds are reasonable and provides suggestions.\n"
+        )
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an IoT assistant that analyzes temperature and humidity data."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=300
+        )
+
+        final_report = response.choices[0].message.content.strip()
+        save_last_report(final_report)
 
         return jsonify({
             "temperature": temp,
@@ -145,3 +203,6 @@ def generate_report_for_device():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
