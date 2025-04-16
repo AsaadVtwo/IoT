@@ -5,7 +5,7 @@ import logging
 import requests
 import openai
 import traceback
-from flask import Flask, request, jsonify, render_template_string, redirect
+from flask import Flask, request, jsonify, render_template, redirect
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -38,18 +38,24 @@ def save_settings(settings):
     with open(SETTINGS_FILE, "w") as f:
         json.dump(settings, f)
 
-from flask import render_template
+def send_data_to_google_sheet(temp, hum, status):
+    payload = {'temperature': temp, 'humidity': hum, 'status': status}
+    try:
+        response = requests.post(GOOGLE_SCRIPT_URL, json=payload, headers={'Content-Type': 'application/json'})
+        logger.info(f"Google Sheet Response: {response.status_code}")
+    except Exception as e:
+        logger.error(f"Error sending to sheet: {e}")
 
 @app.route("/", methods=["GET"])
 def index():
     return render_template("templates_room_tabs.html")
+
 @app.route("/status")
 def get_status():
     device = request.args.get("device")
     try:
-        # استخراج آخر قراءة من log.csv حسب الغرفة
-        with open("log.csv", "r") as f:
-            lines = f.readlines()[1:]  # بدون العنوان
+        with open(LOG_FILE, "r") as f:
+            lines = f.readlines()[1:]  # Skip header
             last = next(line for line in reversed(lines) if device in line)
             parts = last.strip().split(",")
             return jsonify({
@@ -61,7 +67,6 @@ def get_status():
             })
     except Exception as e:
         return jsonify({"error": "No data for this device", "details": str(e)}), 404
-
 
 @app.route("/save_settings", methods=["POST"])
 def save_settings_route():
@@ -102,15 +107,17 @@ def report():
                 f.write("timestamp,temperature,humidity,status,device\n")
             f.write(f"{now},{temp},{hum},{status},{device}\n")
 
+        send_data_to_google_sheet(temp, hum, status)
+
         prompt = (
             f"System Reading:\n"
-            f"- Temperature: {temp} degrees\n"
+            f"- Temperature: {temp}°C\n"
             f"- Humidity: {hum}%\n"
             f"- Status: {status}\n"
             f"- Time: {now}\n\n"
             f"User Settings:\n"
-            f"- Minimum temperature: {temp_min} degrees\n"
-            f"- Maximum temperature: {temp_max} degrees\n\n"
+            f"- Minimum temperature: {temp_min}°C\n"
+            f"- Maximum temperature: {temp_max}°C\n\n"
             "Please generate a short English report that:\n"
             "1. Analyzes whether the current values are within the user-defined thresholds.\n"
             "2. Evaluates whether the system behavior is appropriate.\n"
@@ -136,3 +143,6 @@ def report():
         logger.error(f"Error processing request: {str(e)}")
         traceback.print_exc()
         return jsonify({"error": "Server error", "details": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
