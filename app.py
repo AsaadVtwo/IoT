@@ -72,15 +72,21 @@ def get_status():
 
 @app.route("/save_settings", methods=["POST"])
 def save_settings_route():
-    device = request.form.get("device")
-    temp_min = request.form.get("temp_min")
-    temp_max = request.form.get("temp_max")
+    if request.is_json:
+        data = request.get_json()
+        device = data.get("device")
+        temp_min = data.get("temp_min")
+        temp_max = data.get("temp_max")
+    else:
+        device = request.form.get("device")
+        temp_min = request.form.get("temp_min")
+        temp_max = request.form.get("temp_max")
+
     settings = load_settings()
     settings[device] = {"temp_min": float(temp_min), "temp_max": float(temp_max)}
     save_settings(settings)
 
-
-    # 🟢 إرسال إشعار تلغرام
+    # Telegram notification
     msg = (
         f"⚙️ Settings updated for {device}:\n"
         f"Min Temp: {temp_min}°C\n"
@@ -88,6 +94,7 @@ def save_settings_route():
     )
     send_telegram_message(msg)
     return redirect("/")
+
 
 @app.route("/settings")
 def get_device_settings():
