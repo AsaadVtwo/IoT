@@ -265,7 +265,7 @@ def report():
         Do not repeat the input. Write a concise and helpful professional summary.
         """.strip()
 
-        response = openai.ChatCompletion.create(
+      response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an IoT assistant that analyzes temperature and humidity data."},
