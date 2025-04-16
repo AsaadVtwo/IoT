@@ -78,6 +78,15 @@ def save_settings_route():
     settings = load_settings()
     settings[device] = {"temp_min": float(temp_min), "temp_max": float(temp_max)}
     save_settings(settings)
+
+
+    # 🟢 إرسال إشعار تلغرام
+    msg = (
+        f"⚙️ Settings updated for {device}:\n"
+        f"Min Temp: {temp_min}°C\n"
+        f"Max Temp: {temp_max}°C"
+    )
+    send_telegram_message(msg)
     return redirect("/")
 
 @app.route("/settings")
@@ -206,3 +215,16 @@ def generate_from_logs():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+TELEGRAM_TOKEN = os.getenv("7957608560:AAFi-qgB52eGSkPAn1KnhmT4iYFcETim1Lc")
+TELEGRAM_CHAT_ID = os.getenv("1172667635")
+
+def send_telegram_message(message):
+    try:
+        url = f"https://api.telegram.org/bot7957608560:AAFi-qgB52eGSkPAn1KnhmT4iYFcETim1Lc/sendMessage"
+        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+        requests.post(url, json=payload)
+    except Exception as e:
+        logger.error(f"Failed to send Telegram message: {e}")
+
