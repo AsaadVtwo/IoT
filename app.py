@@ -48,7 +48,7 @@ def send_data_to_google_sheet(temp, hum, status):
 
 @app.route("/", methods=["GET"])
 def index():
-    return render_template("templates_room_tabs.html")
+    return render_template("templates_room_tabs_updated.html")
 
 @app.route("/status")
 def get_status():
