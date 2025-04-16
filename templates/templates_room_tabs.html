@@ -60,20 +60,22 @@
     }
 
     async function generateReport(room) {
-      const reportDiv = document.getElementById(`${room}-report`);
-      reportDiv.innerText = "⏳ Generating new AI report...";
-      try {
-        const res = await fetch(`/report?device=${room}`, { method: "POST" });
-        const data = await res.json();
-        document.getElementById(`${room}-status`).innerHTML = `
-          <b>Temp:</b> ${data.temperature}°C<br>
-          <b>Humidity:</b> ${data.humidity}%<br>
-          <b>Status:</b> ${data.status}
-        `;
-        reportDiv.innerText = data.report || "No report available.";
-      } catch (err) {
-        reportDiv.innerText = "❌ Error generating report.";
-      }
+  const reportDiv = document.getElementById(`${room}-report`);
+  reportDiv.innerText = "⏳ Generating new AI report...";
+  try {
+    const res = await fetch(`/report?device=${room}`, { method: "POST" });
+    const data = await res.json();
+    document.getElementById(`${room}-status`).innerHTML = `
+      <b>Temp:</b> ${data.temperature}°C<br>
+      <b>Humidity:</b> ${data.humidity}%<br>
+      <b>Status:</b> ${data.status}
+    `;
+    reportDiv.innerText = data.report || "No report available.";
+  } catch (err) {
+    reportDiv.innerText = "❌ Error generating report.";
+  }
+}
+
     }
   </script>
 </head>
