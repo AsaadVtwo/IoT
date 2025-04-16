@@ -5,6 +5,7 @@ import logging
 import requests
 import openai
 import traceback
+import csv
 from flask import Flask, request, jsonify, render_template, redirect
 
 app = Flask(__name__)
@@ -236,4 +237,19 @@ def send_telegram_message(message):
     except Exception as e:
         logger.error(f"Failed to send Telegram message: {e}")
 
+
+
+@app.route("/chart_data")
+def chart_data():
+    device = request.args.get("device")
+    if not os.path.exists(LOG_FILE):
+        return jsonify({"error": "Log file not found"}), 404
+
+    try:
+        with open(LOG_FILE, "r") as f:
+            reader = list(csv.DictReader(f))
+            device_data = [row for row in reader if row["device"] == device][-50:]  # آخر 50 قراءة
+        return jsonify(device_data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
