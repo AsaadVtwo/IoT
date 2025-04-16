@@ -14,7 +14,7 @@ SETTINGS_FILE = "settings.json"
 GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybDA0fCsJG7_OeU4TYaxqDSfFKboKtL0hdcxSWLRahC66zmAmAzAV8SYMr3O5Cu9kx/exec'
 LOG_FILE = "log.csv"
 
-LAST_REPORT_FILE = "last_report.txt"
+LAST_REPORT_FILE = "/tmp/last_report.txt"
 
 def save_last_report(text):
     with open(LAST_REPORT_FILE, "w") as f:
