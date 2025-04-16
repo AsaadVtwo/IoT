@@ -38,40 +38,30 @@ def save_settings(settings):
     with open(SETTINGS_FILE, "w") as f:
         json.dump(settings, f)
 
+from flask import render_template
+
 @app.route("/", methods=["GET"])
 def index():
-    settings = load_settings()
-    default_min = settings.get("room1", {}).get("temp_min", 20.0)
-    default_max = settings.get("room1", {}).get("temp_max", 30.0)
-    html = f'''
-    <html><head><style>
-    body {{ font-family: Arial; background: #f4f4f9; text-align: center; }}
-    .report-box {{ background: #e8f0fe; padding: 15px; border-radius: 5px; margin: 10px auto; width: 90%; max-width: 600px; text-align: left; }}
-    </style></head><body>
-    <h2>🌡️ Room Temperature Control</h2>
-    <form action="/save_settings" method="POST">
-        <label>Select Room:</label><br>
-        <select name="device">
-            <option value="room1">Room 1</option>
-            <option value="room2">Room 2</option>
-        </select><br><br>
-        <label>Temp Min:</label><br>
-        <input type="number" name="temp_min" step="0.1" value="{default_min}"><br><br>
-        <label>Temp Max:</label><br>
-        <input type="number" name="temp_max" step="0.1" value="{default_max}"><br><br>
-        <button type="submit">💾 Save Settings</button>
-    </form>
-    '''
+    return render_template("templates_room_tabs.html")
+@app.route("/status")
+def get_status():
+    device = request.args.get("device")
+    try:
+        # استخراج آخر قراءة من log.csv حسب الغرفة
+        with open("log.csv", "r") as f:
+            lines = f.readlines()[1:]  # بدون العنوان
+            last = next(line for line in reversed(lines) if device in line)
+            parts = last.strip().split(",")
+            return jsonify({
+                "timestamp": parts[0],
+                "temperature": float(parts[1]),
+                "humidity": float(parts[2]),
+                "status": parts[3],
+                "report": load_last_report()
+            })
+    except Exception as e:
+        return jsonify({"error": "No data for this device", "details": str(e)}), 404
 
-    if os.path.exists(LOG_FILE):
-        with open(LOG_FILE, "r") as f:
-            last_line = f.readlines()[-1]
-            parts = last_line.strip().split(",")
-            html += f"<h3>🟢 Latest Room Status</h3><div class='report-box'><b>Room:</b> {parts[4]}<br><b>Temp:</b> {parts[1]} degrees<br><b>Humidity:</b> {parts[2]}%<br><b>Status:</b> {parts[3]}</div>"
-
-    html += f"<h3>🧠 AI Summary Report</h3><div class='report-box'>{load_last_report()}</div>"
-    html += "</body></html>"
-    return html
 
 @app.route("/save_settings", methods=["POST"])
 def save_settings_route():
