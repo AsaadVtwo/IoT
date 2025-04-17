@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 SETTINGS_FILE = "settings.json"
 LOG_FILE = "log.csv"
 LAST_REPORT_FILE = "/tmp/last_report.txt"
-GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbybDA0fCsJG7_OeU4TYaxqDSfFKboKtL0hdcxSWLRahC66zmAmAzAV8SYMr3O5Cu9kx/exec'
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -39,13 +38,7 @@ def save_settings(settings):
     with open(SETTINGS_FILE, "w") as f:
         json.dump(settings, f)
 
-def send_data_to_google_sheet(temp, hum, status):
-    payload = {'temperature': temp, 'humidity': hum, 'status': status}
-    try:
-        response = requests.post(GOOGLE_SCRIPT_URL, json=payload, headers={'Content-Type': 'application/json'})
-        logger.info(f"Google Sheet Response: {response.status_code}")
-    except Exception as e:
-        logger.error(f"Error sending to sheet: {e}")
+
 
 @app.route("/", methods=["GET"])
 def index():
@@ -126,7 +119,6 @@ def report():
                 f.write("timestamp,temperature,humidity,status,device\n")
             f.write(f"{now},{temp},{hum},{status},{device}\n")
 
-        send_data_to_google_sheet(temp, hum, status)
 
         prompt = (
             f"System Reading:\n"
