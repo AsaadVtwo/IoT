@@ -107,15 +107,39 @@
       }
     }
 
-    async function saveSettings(event, room) {
-      event.preventDefault();
-      const form = new FormData();
-      form.append("device", room);
-      form.append("temp_min", document.getElementById(`${room}-min`).value);
-      form.append("temp_max", document.getElementById(`${room}-max`).value);
-      await fetch("/save_settings", { method: "POST", body: form });
+  async function saveSettings(event, room) {
+  event.preventDefault();
+  const minVal = parseFloat(document.getElementById(`${room}-min`).value);
+  const maxVal = parseFloat(document.getElementById(`${room}-max`).value);
+
+  if (isNaN(minVal) || isNaN(maxVal)) {
+    showToast("❌ Please enter valid numbers.");
+    return;
+  }
+
+  if (minVal >= maxVal) {
+    showToast("⚠️ Min temperature must be less than Max.");
+    return;
+  }
+
+  const form = new FormData();
+  form.append("device", room);
+  form.append("temp_min", minVal);
+  form.append("temp_max", maxVal);
+
+  try {
+    const res = await fetch("/save_settings", { method: "POST", body: form });
+    if (res.ok) {
+      showToast(`✅ Settings saved for ${room}`);
       refreshRoom(room);
+    } else {
+      showToast(`❌ Failed to save settings for ${room}`);
     }
+  } catch (err) {
+    showToast("❌ Error saving settings.");
+  }
+}
+
 
     async function generateReport(room) {
       const reportDiv = document.getElementById(`${room}-report`);
@@ -190,6 +214,23 @@
       refreshRoom('room1');
       refreshRoom('room2');
     };
+
+    function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "toast position-fixed bottom-0 end-0 m-4 text-white bg-dark border-0 show";
+  toast.setAttribute("role", "alert");
+  toast.setAttribute("aria-live", "assertive");
+  toast.setAttribute("aria-atomic", "true");
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
   </script>
 </body>
 </html>
